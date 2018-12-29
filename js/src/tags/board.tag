@@ -46,18 +46,22 @@
         }
     </style>
     <script>
+        this.mixin('board');
         let self = this;
-        this.mixin('trello-utils');
         this.board_id = localStorage.getItem('board-id');
+
+        this.boardSubject.subscribe((evt) => {
+            if (evt.type === 'board-data') {
+                self.updateBoard(evt.value);
+            }
+        });
 
         this.load_cards = function () {
             if (self.board_id == null) {
                 return;
             }
-            riot.default.store.trigger('show-loading');
-            this.getCards().then((res) => {
-                self.updateBoard(this.processCards(res));
-            });
+
+            this.getCards$().subscribe(cards => self.boardDataUpdate(cards));
         }
 
         this.update_board_id = function (e) {
@@ -68,20 +72,14 @@
             window.localStorage.setItem('board-id', this.refs.boardIdValue.value);
             self.board_id = this.refs.boardIdValue.value;
             self.update();
-            riot.default.store.trigger('board-id-update', this.refs.boardIdValue.value);
+            self.boardUpdate(this.refs.boardIdValue.value);
             self.load_cards();
         }
 
         this.updateBoard = function (lists) {
             self.lists = lists;
             self.update();
-            riot.default.store.trigger('hide-loading');
-            riot.default.store.trigger('activate-filter-button');
         }
-
-        riot.default.store.on('filter-applied', function (lists) {
-            self.updateBoard(lists);
-        });
 
         this.on('updated', function () {
             if (!self.board_id) {

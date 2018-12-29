@@ -9,9 +9,7 @@
             <option class="{filter.name}" each={option in filter.options} value={option}> {option} </option>
         </select>
     </div>
-    <div if={board_id !=null} ref="loadingFilter" id="loading-filter"><img src="/static/svg/spinner.svg" /></div>
-    <button if={board_id !=null} ref="applyFilter" onclick={this.applyFilter} id="apply-filter" disabled="disabled">Apply
-        filter</button>
+    <button if={board_id !=null} ref="applyFilter" onclick={ applyFilter } id="apply-filter">Apply filter</button>
 
     <style>
         .loading img {
@@ -48,87 +46,71 @@
 
     <script>
         this.board_id = localStorage.getItem('board-id');
-        this.mixin('trello-utils');
+        this.mixin('loading');
+        this.mixin('filter');
+        this.mixin('board');
         this.selectedFilters = 'No';
         var self = this;
 
-        riot.default.store.on('hide-loading', () => {
-            if (this.refs.loadingFilter) {
-                this.refs.loadingFilter.style.display = 'none';
-            }
-        });
+        this.on('mount', () => {
+            self.loadingSubject
+                .subscribe(isActive => {
+                    self.refs.applyFilter.disabled = isActive ? 'disabled' : false;
+                });
+        })
 
-        riot.default.store.on('show-loading', () => {
-            if (this.refs.loadingFilter) {
-                this.refs.loadingFilter.style.display = 'block';
-            }
-        });
-
-        riot.default.store.on('activate-filter-button', () => {
-            if (this.refs.applyFilter) {
-                this.refs.applyFilter.disabled = false;
-            }
-        });
-        this.load_custom_fields = function () {
+        this.load_custom_fields = () => {
             if (self.board_id == null) {
                 return;
             }
 
-            this.getCustomFields().then((res) => {
-                let filters = [];
-                Object.entries(res).forEach((filter) => {
-                    filters.push({
-                        name: filter[0],
-                        options: filter[1]
-                    });
-                });
+            this.getCustomFields$.subscribe(filters => {
                 self.filters = filters;
                 self.update();
             });
         };
 
         this.applyFilter = function () {
-            riot.default.store.trigger('show-loading');
-            document.getElementById('apply-filter').disabled = 'disabled';
             let options = [];
-            Array.from(document.getElementsByClassName('funi-filter-values')).forEach((filter) => {
-                Array.from(filter.selectedOptions).forEach((option) => {
-                    options.push(option)
-                });
-            });
+            Array.from(document.getElementsByClassName('funi-filter-values'))
+                .filter(list => list.selectedOptions.length > 0)
+                .forEach(list => options = options.concat(Array.from(list.selectedOptions)))
 
             this.filter(options);
         }
 
         this.filter = function (options) {
             var filters = [];
-            Array.from(options).filter((option) => {
-                return option.value !== 0
-            }).forEach((option) => {
-                filters.push({
-                    name: option.className,
-                    value: option.value
-                })
-            });
+            Array.from(options)
+                .filter(option => option.value !== 0)
+                .forEach(
+                    option => filters.push({
+                        name: option.className,
+                        value: option.value
+                    })
+                );
 
-            this.getCards(filters).then((res) => {
-                riot.default.store.trigger('filter-applied', this.processCards(res));
-            });
+            this.getCards$(filters).subscribe(cards => {
+                self.boardDataUpdate(cards);
+                let selectedFilters = '';
+                const sep = ' + ';
+                filters.forEach((filter) => {
+                    selectedFilters += filter.value + sep
+                });
 
-            let selectedFilters = '';
-            filters.forEach((filter) => {
-                selectedFilters += filter.value + ' + '
+                selectedFilters = selectedFilters.length === 0 ? 'No' : selectedFilters.slice(0,
+                    sep.length * -1);
+                this.selectedFilters = selectedFilters;
+                this.update();
             });
-
-            selectedFilters = selectedFilters.length === 0 ? 'No' : selectedFilters.slice(0, -3);
-            this.selectedFilters = selectedFilters;
-            this.update();
         }
 
-        riot.default.store.on('board-id-update', (board_id) => {
-            self.board_id = board_id;
-            self.update();
-            self.load_custom_fields();
+        this.boardSubject.subscribe(evt => {
+            if (evt.type === 'update') {
+                self.board_id = evt.value;
+                self.update();
+                self.load_custom_fields();
+            }
         });
 
         this.load_custom_fields();

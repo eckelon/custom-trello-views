@@ -1,13 +1,14 @@
 import riot from 'riot';
 import 'riot-hot-reload';
-import './tags/filter.tag';
+import boardUtils from './mixins/board';
+import filterUtils from './mixins/filter';
+import loadingUtils from './mixins/loading';
 import './tags/board.tag';
-import trelloUtils from './mixins/trello-utils';
+import './tags/filter.tag';
+import './tags/loading.tag';
 
-var Store = function () {
-    riot.observable(this)
-};
+riot.mixin('loading', loadingUtils);
+riot.mixin('filter', filterUtils);
+riot.mixin('board', boardUtils);
 
-riot.mixin('trello-utils', trelloUtils);
-riot.store = new Store();
 riot.mount('*');

@@ -1,4 +1,6 @@
-import { Subject } from 'rxjs';
+import {
+    Subject
+} from 'rxjs';
 
 const loadingSubject = new Subject();
 let loadingCount = 0;
@@ -21,10 +23,22 @@ const updateLoadingCount = update => {
     }
 }
 
+const loadingFlow = function () {
+    const self = this;
+
+    this.on('mount', () => {
+        self.loadingSubject
+            .subscribe(isActive => {
+                self.refs.loadingFilter.style.display = isActive ? 'block' : 'none';
+            });
+    });
+}
+
 const loadingUtils = {
     loadingSubject,
     startLoading,
-    finishLoading
+    finishLoading,
+    loadingFlow
 }
 
 export default loadingUtils;

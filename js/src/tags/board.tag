@@ -47,68 +47,6 @@
     </style>
     <script>
         this.mixin('board');
-        let self = this;
-        this.board_id = localStorage.getItem('board-id');
-
-        this.boardSubject.subscribe((evt) => {
-            if (evt.type === 'board-data') {
-                self.updateBoard(evt.value);
-            }
-        });
-
-        this.load_cards = function () {
-            if (self.board_id == null) {
-                return;
-            }
-
-            this.getCards$().subscribe(cards => self.boardDataUpdate(cards));
-        }
-
-        this.update_board_id = function (e) {
-            e.preventDefault();
-            if (!this.refs.boardIdValue.value || this.refs.boardIdValue.value.length === 0) {
-                return;
-            }
-            window.localStorage.setItem('board-id', this.refs.boardIdValue.value);
-            self.board_id = this.refs.boardIdValue.value;
-            self.update();
-            self.boardUpdate(this.refs.boardIdValue.value);
-            self.load_cards();
-        }
-
-        this.updateBoard = function (lists) {
-            self.lists = lists;
-            self.update();
-        }
-
-        this.on('updated', function () {
-            if (!self.board_id) {
-                return;
-            }
-
-            this.recalculateBoardWidth();
-        });
-
-        this.recalculateBoardWidth = function () {
-            this.refs.trelloLists.style.width = (this.refs.trelloLists.getElementsByClassName('trello-lists-item').length *
-                this.calculateElementWidth(this.refs.trelloLists.getElementsByClassName('trello-lists-item')[0])
-            ) + 'px';
-        }
-
-        this.calculateElementWidth = function (element) {
-            if ('undefined' === typeof element) {
-                return 0;
-            }
-            //https://stackoverflow.com/a/23270007
-            const style = element.currentStyle || window.getComputedStyle(element),
-                width = element.offsetWidth, // or use style.width
-                margin = parseFloat(style.marginLeft) + parseFloat(style.marginRight),
-                padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight),
-                border = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
-
-            return width + margin - padding + border;
-        };
-
-        this.load_cards();
+        this.boardFlow.call(this);
     </script>
 </board>

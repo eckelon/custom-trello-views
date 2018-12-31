@@ -7,13 +7,6 @@
     </style>
     <script>
         this.mixin('loading');
-        const self = this;
-
-        this.on('mount', () => {
-            self.loadingSubject
-                .subscribe(isActive => {
-                    self.refs.loadingFilter.style.display = isActive ? 'block' : 'none';
-                });
-        });
+        this.loadingFlow.call(this);
     </script>
 </loading>

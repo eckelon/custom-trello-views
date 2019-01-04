@@ -1,0 +1,70 @@
+<filter>
+    <div class="funi-filter" each="{filter in opts.filters}">
+        <p class="funi-filter-name">{filter.name}:</p>
+        <select id="{cleanString(filter.name)}" class="funi-filter-values" multiple>
+            <option class="{filter.name}" value="0"> No filter </option>
+            <option class="{filter.name}" each="{option in filter.options}" value={option.value.text}> {option.value.text} </option>
+        </select>
+    </div>
+
+    <button ref="applyFilter" onclick="{ applyFilter }" id="apply-filter">Apply filter</button>
+
+    <style>
+        .loading img {
+            width: 50px;
+            display: block;
+            margin: auto;
+        }
+
+
+        .funi-filter-info .funi-filter-info-current {
+            font-weight: bold;
+            color: blue;
+            margin: 0 20px;
+
+        }
+
+        .funi-filter {
+            display: inline-block;
+        }
+
+        .funi-filter .funi-filter-name {
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .funi-filter .funi-filter-values {
+            margin: 0 25px;
+            min-width: 150px;
+            padding: 10px;
+        }
+
+        #apply-filter {
+            display: block;
+            margin-left: 25px;
+        }
+    </style>
+    </style>
+    <script>
+        import { filterService } from '../services/filter.service';
+        import { fromEvent } from 'rxjs';
+        import SlimSelect from 'slim-select'
+        import '../styles/slimselect.css';
+
+        const tag = this;
+
+        this.on('mount', () => {
+            filterService.filterState$.subscribe(filters => {
+                tag.opts.filters = filters;
+                tag.update();
+                filters.map(filter => new SlimSelect({
+                    select: document.getElementById(tag.cleanString(filter.name))
+                }));
+            });
+            // fromEvent(this.refs.applyFilter, 'click').subscribe();
+        });
+
+        this.cleanString = string => string.replace(' ', '').toLowerCase();
+    </script>
+</filter>

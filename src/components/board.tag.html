@@ -1,0 +1,120 @@
+<board>
+    <div id="trello-lists" ref="trelloLists" class="trello-lists">
+        <div class="trello-lists-item" each={list in opts.lists}>
+            <span class="trello-lists-item-title">{list.name}</span>
+            <div class="trello-lists-item-content">
+                <div class="card-info" each={card in list.cards}>
+                    <p class="card-info-custom-field" each={customField in card.customFields}>{customField.name} ->
+                        {customField.value}</p>
+                    <a href="{card.url}">{card.name}</a>
+                </div>
+            </div>
+        </div>
+        <!-- <div show={ board_id==null }>
+            <input type="text" ref="boardIdValue" placeholder="Board Id" />
+            <button onclick="{update_board_id}">Update Board Id!</button>
+        </div> -->
+        <!-- </div> -->
+    </div>
+    <style>
+        .trello-lists .trello-lists-item {
+            display: inline-block;
+            margin: 20px;
+            width: 300px;
+            vertical-align: top;
+        }
+
+        .trello-lists .trello-lists-item .trello-lists-item-title {
+
+            font-weight: bold;
+            text-align: center;
+            min-height: 50px;
+        }
+
+        .trello-lists .trello-lists-item .trello-lists-item-content {
+            margin: 12px 0;
+            min-height: 150px;
+        }
+
+        .trello-lists .trello-lists-item .trello-lists-item-content .card-info {
+            border: 1px solid black;
+            margin: 5px;
+        }
+
+        .trello-lists .trello-lists-item .trello-lists-item-content .card-info .card-info-custom-field {
+            font-size: 10px;
+        }
+    </style>
+    <script>
+        import { cardService } from '../services/card.service';
+        import { filterService } from '../services/filter.service';
+        import { combineLatest } from 'rxjs';
+        import { tap, map, mergeMap } from 'rxjs/operators';
+
+        const tag = this;
+
+        const cards$ = (lists, filters) => {
+            const boardCards = [];
+            return cardService.cardState$
+                .pipe(
+                    tap(lists.map(list => {
+                        boardCards.push({
+                            name: list.name,
+                            cards: []
+                        })
+                    })),
+                    map(cards => {
+                        cards.map(card => {
+                            card.customFields.map(customField => {
+                                const customFieldNameElement = filters.filter(cf => cf.id === customField.idCustomField)[0];
+                                const customFieldValueElement = customFieldNameElement.options.filter(option => option.id === customField.idValue)[0];
+                                if (customFieldNameElement) {
+                                    customField.name = customFieldNameElement.name;
+                                    customField.value = customFieldValueElement.value.text;
+                                }
+                            })
+                            card.list = lists.filter(list => list.id === card.listId)[0].name;
+                            return card;
+                        })
+                        return cards;
+                    }),
+                    map(cards => {
+                        boardCards.map(column => {
+                            column.cards = cards.filter(card => card.list === column.name);
+                        });
+                        return cards;
+                    }),
+                    map(cards => boardCards)
+                )
+        };
+
+        combineLatest(cardService.listState$, filterService.filterState$).pipe(
+            mergeMap(params => cards$(params[0], params[1])),
+            tap(lists => tag.opts.lists = lists),
+            tap(lists => tag.update()),
+            tap(lists => tag.calculateBoardWidth())).subscribe();
+
+
+        tag.calculateBoardWidth = () => {
+            let boardWidth = 0;
+            const trelloList = tag.refs.trelloLists;
+            const columns = Array.prototype.slice.call(trelloList.childNodes).filter(element => element.className === 'trello-lists-item');
+            columns.map(element => boardWidth += tag.getElementWidth(element));
+            trelloList.style.width = `${boardWidth}px`;
+        }
+
+        tag.getElementWidth = element => {
+            if ('undefined' === typeof element) {
+                return 0;
+            }
+            //https://stackoverflow.com/a/23270007
+            const style = element.currentStyle || window.getComputedStyle(element),
+                width = element.offsetWidth, // or use style.width
+                margin = parseFloat(style.marginLeft) + parseFloat(style.marginRight),
+                padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight),
+                border = parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+
+            return width + margin - padding + border;
+        }
+    </script>
+</board>

@@ -1,7 +1,7 @@
 <filter>
-    <div class="funi-filter" each="{filter in opts.filters}">
-        <p class="funi-filter-name">{filter.name}:</p>
-        <select id="{cleanString(filter.name)}" class="funi-filter-values" multiple>
+    <div ref="selectFilters" class="filter" each="{filter in opts.filters}">
+        <p class="filter-name">{filter.name}:</p>
+        <select id="{cleanString(filter.name)}" class="filter-values" multiple>
             <option class="{filter.name}" value="0"> No filter </option>
             <option class="{filter.name}" each="{option in filter.options}" value={option.value.text}> {option.value.text} </option>
         </select>
@@ -17,24 +17,24 @@
         }
 
 
-        .funi-filter-info .funi-filter-info-current {
+        .filter-info .filter-info-current {
             font-weight: bold;
             color: blue;
             margin: 0 20px;
 
         }
 
-        .funi-filter {
+        .filter {
             display: inline-block;
         }
 
-        .funi-filter .funi-filter-name {
+        .filter .filter-name {
             font-size: 12px;
             font-weight: bold;
             text-align: center;
         }
 
-        .funi-filter .funi-filter-values {
+        .filter .filter-values {
             margin: 0 25px;
             min-width: 150px;
             padding: 10px;
@@ -48,7 +48,8 @@
     </style>
     <script>
         import { filterService } from '../services/filter.service';
-        import { fromEvent } from 'rxjs';
+        import { from, fromEvent, combineLatest } from 'rxjs';
+        import { flatMap, mergeMap, map, tap, startWith, filter } from 'rxjs/operators';
         import SlimSelect from 'slim-select'
         import '../styles/slimselect.css';
 
@@ -61,8 +62,19 @@
                 filters.map(filter => new SlimSelect({
                     select: document.getElementById(tag.cleanString(filter.name))
                 }));
+
+                selects$(tag.refs.selectFilters).pipe(
+                    flatMap(select => change$(select)),
+                    tap(event => {
+                        let selectedFilters = filterService.getSelected() || {};
+                        selectedFilters[event.target.id] = Array.prototype.slice.call(event.target.selectedOptions).map(option => option.value);
+                        filterService.updateSelectedFilters(selectedFilters)
+                    })
+                ).subscribe();
             });
-            // fromEvent(this.refs.applyFilter, 'click').subscribe();
+
+            const change$ = element => fromEvent(element, 'change');
+            const selects$ = element => from(element);
         });
 
         this.cleanString = string => string.replace(' ', '').toLowerCase();

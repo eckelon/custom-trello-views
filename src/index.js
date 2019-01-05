@@ -8,8 +8,9 @@ import { filterService } from './services/filter.service';
 import { cards$, customFields$, lists$ } from './services/trello.service';
 riot.mount('*');
 
-
 authService.initAuth();
 customFields$().subscribe(filterService.updateFilters);
 lists$().subscribe(cardService.updateLists);
 cards$().subscribe(cardService.updateCards);
+
+// filterService.selectedFilterState$.subscribe(console.log);

@@ -7,8 +7,6 @@
         </select>
     </div>
 
-    <button ref="applyFilter" onclick="{ applyFilter }" id="apply-filter">Apply filter</button>
-
     <style>
         .loading img {
             width: 50px;
@@ -39,43 +37,46 @@
             min-width: 150px;
             padding: 10px;
         }
-
-        #apply-filter {
-            display: block;
-            margin-left: 25px;
-        }
     </style>
     </style>
     <script>
+        import { boardService } from '../services/board.service';
         import { filterService } from '../services/filter.service';
-        import { from, fromEvent, combineLatest } from 'rxjs';
-        import { flatMap, mergeMap, map, tap, startWith, filter } from 'rxjs/operators';
-        import SlimSelect from 'slim-select'
+        import { from, fromEvent } from 'rxjs';
+        import { flatMap, mergeMap, tap, filter, map } from 'rxjs/operators';
+        import SlimSelect from 'slim-select';
         import '../styles/slimselect.css';
 
         const tag = this;
 
         this.on('mount', () => {
-            filterService.filterState$.subscribe(filters => {
-                tag.opts.filters = filters;
-                tag.update();
-                filters.map(filter => new SlimSelect({
-                    select: document.getElementById(tag.cleanString(filter.name))
-                }));
-
-                selects$(tag.refs.selectFilters).pipe(
-                    flatMap(select => change$(select)),
-                    tap(event => {
-                        let selectedFilters = filterService.getSelected() || {};
-                        selectedFilters[event.target.id] = Array.prototype.slice.call(event.target.selectedOptions).map(option => option.value);
-                        filterService.updateSelectedFilters(selectedFilters)
-                    })
-                ).subscribe();
-            });
-
-            const change$ = element => fromEvent(element, 'change');
-            const selects$ = element => from(element);
+            boardService.board$.pipe(
+                filter(board => undefined !== board),
+                filter(board => undefined !== board.customFields),
+                filter(board => board.customFields.length > 0),
+                tap(updateViewFilters),
+                filter(upd => undefined === upd.selectedFilters),
+                flatMap(_ => selects$(tag.refs.selectFilters)),
+                flatMap(element => change$(element.querySelector('select'))),
+                tap(bindSelectFilterActions)
+            ).subscribe();
         });
+
+        const change$ = element => fromEvent(element, 'change');
+        const selects$ = element => from(element);
+        const updateViewFilters = board => {
+            tag.opts.filters = board.customFields;
+            tag.update();
+            board.customFields.map(filter => new SlimSelect({
+                select: document.getElementById(tag.cleanString(filter.name))
+            }));
+        }
+
+        const bindSelectFilterActions = event => {
+            let selectedFilters = filterService.getSelected() || {};
+            selectedFilters[event.target.id] = Array.prototype.slice.call(event.target.selectedOptions).map(option => option.value);
+            filterService.updateSelectedFilters(selectedFilters);
+        }
 
         this.cleanString = string => string.replace(' ', '').toLowerCase();
     </script>

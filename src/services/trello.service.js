@@ -1,5 +1,5 @@
-import { from, throwError } from 'rxjs';
-import { catchError, concatMap, filter, map } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, from, throwError } from 'rxjs';
+import { catchError, concatMap, filter, map, mergeMap, tap, flatMap, switchMap } from 'rxjs/operators';
 import { authService } from './auth.service';
 import { doGetRequest } from './httpClient';
 
@@ -64,7 +64,7 @@ const processCards = raw => {
 }
 
 
-export const cards$ = () => {
+const cards$ = (boardId) => {
     return authService.authState$.pipe(
         filter(auth => auth !== undefined),
         map(auth => ({
@@ -74,7 +74,7 @@ export const cards$ = () => {
             members: true,
             lists: true
         })),
-        concatMap(options => trelloRequest$('boards', 'cards', 'YCW7WPf3', options)),
+        concatMap(options => trelloRequest$('boards', 'cards', boardId, options)),
         map(processCards),
         catchError(error => {
             throw new Error(error);
@@ -82,31 +82,47 @@ export const cards$ = () => {
     );
 };
 
-export const lists$ = () => {
+const lists$ = (boardId) => {
     return authService.authState$.pipe(
         filter(auth => auth !== undefined),
         map(auth => ({
             key: auth['trelloKey'],
             token: auth['trelloToken'],
         })),
-        concatMap(options => trelloRequest$('boards', 'lists', 'YCW7WPf3', options)),
+        concatMap(options => trelloRequest$('boards', 'lists', boardId, options)),
         catchError(error => {
             throw new Error(error);
         })
     );
 };
 
-export const customFields$ = () => {
+const customFields$ = (boardId) => {
     return authService.authState$.pipe(
         filter(auth => auth !== undefined),
         map(auth => ({
             key: auth['trelloKey'],
             token: auth['trelloToken'],
         })),
-        concatMap(options => trelloRequest$('boards', 'customFields', 'YCW7WPf3', options)),
+        concatMap(options => trelloRequest$('boards', 'customFields', boardId, options)),
         map(processCustomFields),
         catchError(error => {
             throw new Error(error);
         })
     );
 };
+
+
+const trello$ = new BehaviorSubject();
+const updateTrello$ = (boardId) => {
+    return combineLatest(customFields$(boardId), lists$(boardId), cards$(boardId)).pipe(
+        tap(params => {
+            trello$.next({
+                customFields: params[0],
+                lists: params[1],
+                cards: params[2],
+            })
+        })
+    );
+};
+
+export const trelloService = { trello$, updateTrello$ }

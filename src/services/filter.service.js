@@ -1,14 +1,14 @@
-import { BehaviorSubject, Subject } from "rxjs";
+import { Subject } from "rxjs";
+import { boardService } from "./board.service";
 
 const filterState$ = new Subject();
-const selectedFilterState$ = new BehaviorSubject();
 
 const updateFilters = upd => filterState$.next(upd);
-const updateSelectedFilters = upd => selectedFilterState$.next(upd);
-const getSelected = () => selectedFilterState$.getValue();
+const updateSelectedFilters = selectedFilters => boardService.updateBoard({ selectedFilters });
+const getSelected = () => boardService.getBoard().selectedFilters || {};
+
 export const filterService = {
     filterState$,
-    selectedFilterState$,
     updateFilters,
     updateSelectedFilters,
     getSelected

@@ -46,64 +46,44 @@
         }
     </style>
     <script>
-        import { cardService } from '../services/card.service';
-        import { filterService } from '../services/filter.service';
-        import { combineLatest } from 'rxjs';
-        import { tap, map, mergeMap } from 'rxjs/operators';
+        import { filter, tap, map } from 'rxjs/operators';
+        import { boardService } from '../services/board.service';
 
         const tag = this;
 
-        const cards$ = (lists, customFields) => {
-            const boardCards = [];
-            return cardService.cardState$
+        this.on('mount', () => {
+            boardService.board$
                 .pipe(
-                    tap(lists.map(list => {
-                        boardCards.push({
-                            name: list.name,
-                            cards: []
-                        })
-                    })),
-                    map(cards => {
-                        cards.map(card => {
-                            card.customFields.map(customField => {
-                                const customFieldNameElement = customFields.filter(cf => cf.id === customField.idCustomField)[0];
-                                const customFieldValueElement = customFieldNameElement.options.filter(option => option.id === customField.idValue)[0];
-                                if (customFieldNameElement) {
-                                    customField.name = customFieldNameElement.name;
-                                    customField.value = customFieldValueElement.value.text;
-                                }
-                            })
-                            card.list = lists.filter(list => list.id === card.listId)[0].name;
-                            return card;
-                        })
-                        return cards;
-                    }),
-                    map(cards => {
-                        boardCards.map(column => {
-                            column.cards = cards.filter(card => card.list === column.name);
-                        });
-                        return cards;
-                    }),
-                    map(cards => boardCards)
+                    filter(boardNotEmpty),
+                    map(filterCards),
+                    tap(board => {
+                        tag.opts.lists = board.boardCards;
+                        tag.update();
+                        calculateBoardWidth();
+                    })
                 )
-        };
+                .subscribe();
+        });
 
-        combineLatest(cardService.listState$, filterService.filterState$).pipe(
-            mergeMap(params => cards$(params[0], params[1])),
-            tap(lists => tag.opts.lists = lists),
-            tap(lists => tag.update()),
-            tap(lists => tag.calculateBoardWidth())).subscribe();
-
-
-        tag.calculateBoardWidth = () => {
+        const boardNotEmpty = board => {
+            return undefined !== board && undefined !== board.boardCards;
+        }
+        const filterCards = board => {
+            if (undefined === board.selectedFilters || board.selectedFilters.length === 0) {
+                return board;
+            }
+            //TODO: filter cards!
+            return board;
+        }
+        // those functions should go to an utils service or smth like that
+        const calculateBoardWidth = () => {
             let boardWidth = 0;
             const trelloList = tag.refs.trelloLists;
             const columns = Array.prototype.slice.call(trelloList.childNodes).filter(element => element.className === 'trello-lists-item');
-            columns.map(element => boardWidth += tag.getElementWidth(element));
+            columns.map(element => boardWidth += getElementWidth(element));
             trelloList.style.width = `${boardWidth}px`;
         }
-
-        tag.getElementWidth = element => {
+        const getElementWidth = element => {
             if ('undefined' === typeof element) {
                 return 0;
             }

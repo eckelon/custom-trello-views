@@ -69,10 +69,41 @@
             return undefined !== board && undefined !== board.boardCards;
         }
         const filterCards = board => {
+
             if (undefined === board.selectedFilters || board.selectedFilters.length === 0) {
                 return board;
             }
-            //TODO: filter cards!
+
+            board.boardCards
+                .filter(column => {
+                    let hasCustomFields = false;
+                    return true;
+                })
+                .map(column => {
+                    column.cards = column.cards.filter(card => {
+                        if (undefined === card.customFields || card.customFields.length === 0) {
+                            return false;
+                        }
+
+                        let cardIn = false;
+                        card.customFields.map(cf => {
+                            let filterIndex = 0;
+                            Object.entries(board.selectedFilters)
+                                .filter(filterEntry => cleanString(filterEntry[0]) === cleanString(cf.name))
+                                .filter(filterEntry => {
+                                    let match = false;
+                                    filterEntry[1].map(filterName => match = filterName === cf.value);
+                                    return match
+                                })
+                                .map(_ => filterIndex++);
+
+                            cardIn = (filterIndex === Object.keys(board.selectedFilters).length);
+                        })
+                        return cardIn;
+                    });
+
+                    return column;
+                })
             return board;
         }
         // those functions should go to an utils service or smth like that
@@ -96,5 +127,7 @@
 
             return width + margin - padding + border;
         }
+
+        const cleanString = string => string.replace(' ', '').toLowerCase();
     </script>
 </board>
